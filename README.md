@@ -1,3 +1,4 @@
+
 # MCP Sandtimer Server
 
 This repository contains a Python implementation of a local [Model Context Protocol](https://github.com/modelcontextprotocol) (MCP) server that exposes the **sandtimer** desktop application through MCP tools. The server forwards JSON commands to the sandtimer TCP listener running on `127.0.0.1:61420`, allowing ChatGPT or any MCP compatible client to control the GUI timer application.
@@ -14,10 +15,10 @@ This repository contains a Python implementation of a local [Model Context Proto
 ```
 src/
 └── mcp_sandtimer/
-    ├── __init__.py
-    ├── __main__.py
+    ├── init.py
+    ├── main.py
     └── server.py
-```
+````
 
 ## Running locally
 
@@ -27,7 +28,7 @@ Create a virtual environment and install the project in editable mode:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-```
+````
 
 Run the MCP server (ensure that the sandtimer application is already running and listening on the default port):
 
@@ -37,11 +38,37 @@ python -m mcp_sandtimer
 
 The server communicates using STDIO, so it can be launched by ChatGPT or any MCP-compatible client. The included tools are:
 
-| Tool | Parameters | Description |
-| --- | --- | --- |
-| `start_timer` | `label` (string), `time` (number of seconds) | Creates or restarts a timer with the provided duration. |
-| `reset_timer` | `label` (string) | Resets an existing timer to its original duration. |
-| `cancel_timer` | `label` (string) | Cancels and closes the timer window. |
+| Tool           | Parameters                                   | Description                                             |
+| -------------- | -------------------------------------------- | ------------------------------------------------------- |
+| `start_timer`  | `label` (string), `time` (number of seconds) | Creates or restarts a timer with the provided duration. |
+| `reset_timer`  | `label` (string)                             | Resets an existing timer to its original duration.      |
+| `cancel_timer` | `label` (string)                             | Cancels and closes the timer window.                    |
+
+## Using in Cursor
+
+```json
+{
+  "mcpServers": {
+    "sandtimer": {
+      "command": "python",
+      "args": ["-m", "mcp_sandtimer"],
+      "env": {
+        "PYTHONPATH": "absolute\\path\\to\\mcp-sandtimer-py\\src",
+        "SANDTIMER_HOST": "127.0.0.1",
+        "SANDTIMER_PORT": "61420"
+      }
+    }
+  }
+}
+```
+
+
+
+## Demo
+
+This GIF shows the server in use:
+
+![sandtimer-mcp](https://luweiphoto.oss-cn-wuhan-lr.aliyuncs.com/202509251732398.gif)
 
 ## Sandtimer integration
 
@@ -75,3 +102,7 @@ The workflow definition lives in [`.github/workflows/release.yml`](.github/workf
 ## License
 
 Released under the MIT License. See [LICENSE](LICENSE) for details.
+
+```
+::contentReference[oaicite:0]{index=0}
+```
