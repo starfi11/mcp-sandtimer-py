@@ -1,50 +1,59 @@
-
 # MCP Sandtimer Server
 
-This repository contains a Python implementation of a local [Model Context Protocol](https://github.com/modelcontextprotocol) (MCP) server that exposes the **sandtimer** desktop application through MCP tools. The server forwards JSON commands to the sandtimer TCP listener running on `127.0.0.1:61420`, allowing ChatGPT or any MCP compatible client to control the GUI timer application.
+A lightweight Python server that exposes the desktop **sandtimer** application through the [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol). The process speaks JSON-RPC 2.0 over STDIO so that ChatGPT or any MCP-capable client can spin up named countdown timers by delegating to the sandtimer TCP listener on `127.0.0.1:61420`.
 
-## Features
+## Why it exists
 
-- Implements the MCP handshake and tool interfaces entirely over STDIO.
-- Provides three tools: `start_timer`, `reset_timer`, and `cancel_timer`.
-- Validates user input and forwards commands to sandtimer using TCP sockets.
-- Packaged as a standalone executable for Windows via PyInstaller during tagged releases.
+Many AI assistants now understand the MCP handshake and tool contract. This project bridges that ecosystem with the existing Windows sandtimer utility:
 
-## Project Structure
+- 🧩 Implements the full MCP initialization and tool flow without depending on any MCP framework.
+- ⏱️ Offers three purpose-built tools—`start_timer`, `reset_timer`, and `cancel_timer`—with robust input validation and helpful text responses.
+- 🔌 Proxies each tool call to the sandtimer process using a minimal TCP client so the GUI updates instantly.
+- 📦 Can be packaged as a single-file Windows executable via GitHub Actions + PyInstaller for easy distribution.
+
+## Repository layout
 
 ```
 src/
 └── mcp_sandtimer/
-    ├── init.py
-    ├── main.py
-    └── server.py
-````
+    ├── __init__.py          # package metadata and version
+    ├── __main__.py          # console script entry point
+    └── server.py            # MCP server, tool registry, TCP bridge
+```
 
-## Running locally
+## Getting started
 
-Create a virtual environment and install the project in editable mode:
+### Prerequisites
+- Python 3.9 or newer.
+- The sandtimer desktop app running locally and listening on port `61420` (default behaviour of the upstream project).
 
+### Installation
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-````
+```
 
-Run the MCP server (ensure that the sandtimer application is already running and listening on the default port):
+### Running the MCP server
+With sandtimer already running:
 
 ```bash
 python -m mcp_sandtimer
 ```
 
-The server communicates using STDIO, so it can be launched by ChatGPT or any MCP-compatible client. The included tools are:
+The server stays attached to STDIO, so it can be launched directly by ChatGPT, Cursor, or any MCP-aware client process.
 
-| Tool           | Parameters                                   | Description                                             |
-| -------------- | -------------------------------------------- | ------------------------------------------------------- |
-| `start_timer`  | `label` (string), `time` (number of seconds) | Creates or restarts a timer with the provided duration. |
-| `reset_timer`  | `label` (string)                             | Resets an existing timer to its original duration.      |
-| `cancel_timer` | `label` (string)                             | Cancels and closes the timer window.                    |
+### Available tools
 
-## Using in Cursor
+| Tool | Arguments | Description |
+| --- | --- | --- |
+| `start_timer` | `label` (string), `time` (seconds, ≥ 1) | Create or restart a named timer window for the specified duration. |
+| `reset_timer` | `label` (string) | Reset a timer back to its original duration. |
+| `cancel_timer` | `label` (string) | Close the timer window entirely. |
+
+## Using with Cursor (example)
+
+Configure `.cursor/mcp.json` to launch the server from your local checkout:
 
 ```json
 {
@@ -53,7 +62,7 @@ The server communicates using STDIO, so it can be launched by ChatGPT or any MCP
       "command": "python",
       "args": ["-m", "mcp_sandtimer"],
       "env": {
-        "PYTHONPATH": "absolute\\path\\to\\mcp-sandtimer-py\\src",
+        "PYTHONPATH": "absolute\\\path\\\to\\\mcp-sandtimer-py\\\src",
         "SANDTIMER_HOST": "127.0.0.1",
         "SANDTIMER_PORT": "61420"
       }
@@ -62,47 +71,25 @@ The server communicates using STDIO, so it can be launched by ChatGPT or any MCP
 }
 ```
 
+> **Note:** The current implementation always connects to `127.0.0.1:61420`; the `SANDTIMER_HOST` and `SANDTIMER_PORT` variables are shown for convenience when wrapping the entry point with your own launcher.
 
+## How it works
+
+1. The MCP client starts the server process and performs the JSON-RPC `initialize` handshake over STDIO.
+2. `server.py` registers the three timer tools and exposes `tools/list` and `tools/call` endpoints required by the MCP spec.
+3. When a tool is invoked, the server validates arguments, forwards a JSON payload to the sandtimer TCP listener, and returns a human-readable confirmation string.
+4. Any networking failure (for example, sandtimer not running) is propagated back to the MCP client as a structured error response.
+
+## Releases
+
+Pushing a git tag that starts with `v` triggers the workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml): it builds a single-file Windows executable with PyInstaller and attaches the artifact to the GitHub release created for that tag.
 
 ## Demo
 
-This GIF shows the server in use:
+A quick demonstration of the integration in action:
 
 ![sandtimer-mcp](https://luweiphoto.oss-cn-wuhan-lr.aliyuncs.com/202509251732398.gif)
 
-## Sandtimer integration
-
-Each tool invocation generates a JSON command that is sent to the sandtimer process through TCP. The commands follow this shape:
-
-```json
-{ "cmd": "start", "label": "example", "time": 60 }
-```
-
-```json
-{ "cmd": "reset", "label": "example" }
-```
-
-```json
-{ "cmd": "cancel", "label": "example" }
-```
-
-If the sandtimer service is not reachable, the MCP tool will return an error to the client.
-
-## Packaging and releases
-
-When a tag starting with `v` (for example `v1.0.0`) is pushed, GitHub Actions automatically:
-
-1. Checks out the repository on a Windows runner.
-2. Installs the project dependencies and PyInstaller.
-3. Builds a single-file executable containing the MCP server and its dependencies.
-4. Uploads the resulting executable as an asset attached to the GitHub release that GitHub automatically creates for the tag.
-
-The workflow definition lives in [`.github/workflows/release.yml`](.github/workflows/release.yml).
-
 ## License
 
-Released under the MIT License. See [LICENSE](LICENSE) for details.
-
-```
-::contentReference[oaicite:0]{index=0}
-```
+Distributed under the MIT License. See [LICENSE](LICENSE).
