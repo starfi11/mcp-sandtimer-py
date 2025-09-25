@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-sandtimer"
+version = "0.1.0"
+description = "Local MCP server that controls the sandtimer application over TCP."
+readme = "README.md"
+authors = [{ name = "MCP Developer" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+mcp-sandtimer = "mcp_sandtimer.__main__:main"
